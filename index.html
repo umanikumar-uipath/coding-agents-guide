@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UiPath Coding Agents — Implementation Guide</title>
+<style>
+  :root {
+    --red: #FA4616;
+    --dark: #1a1a2e;
+    --navy: #1F3864;
+    --gray: #555;
+    --light: #f8f8f8;
+    --border: #e0e0e0;
+    --code-bg: #f4f4f4;
+    --sidebar-w: 260px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 15px;
+    color: #333;
+    background: #fff;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--dark);
+    color: #ccc;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform .25s ease;
+  }
+
+  #sidebar-logo {
+    background: var(--red);
+    padding: 20px 18px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    letter-spacing: .5px;
+  }
+  #sidebar-logo span { display: block; font-size: 11px; font-weight: normal; opacity: .85; margin-top: 3px; }
+
+  #sidebar nav { padding: 12px 0 24px; }
+
+  #sidebar nav a {
+    display: block;
+    padding: 8px 18px;
+    color: #b0b8c8;
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+    line-height: 1.4;
+  }
+  #sidebar nav a:hover { color: #fff; background: rgba(255,255,255,.06); border-left-color: var(--red); }
+  #sidebar nav a.active { color: #fff; background: rgba(250,70,22,.15); border-left-color: var(--red); }
+  #sidebar nav .nav-section {
+    padding: 14px 18px 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #556;
+    font-weight: bold;
+  }
+
+  /* ── MAIN CONTENT ─────────────────────────────────── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ──────────────────────────────────────── */
+  #topbar {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 36px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  #topbar .breadcrumb { font-size: 13px; color: #888; }
+  #topbar .breadcrumb span { color: var(--red); font-weight: 600; }
+  #search-wrap { position: relative; }
+  #search-wrap input {
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px 6px 34px;
+    font-size: 13px;
+    outline: none;
+    width: 220px;
+    transition: border .2s;
+  }
+  #search-wrap input:focus { border-color: var(--red); }
+  #search-wrap .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 14px; }
+  #hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 22px; }
+
+  /* ── CONTENT AREA ─────────────────────────────────── */
+  #content { padding: 40px 48px 80px; max-width: 960px; }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, var(--red) 0%, #c03010 100%);
+    border-radius: 12px;
+    color: #fff;
+    padding: 40px 44px;
+    margin-bottom: 40px;
+  }
+  .hero h1 { font-size: 28px; margin-bottom: 10px; }
+  .hero p { opacity: .9; font-size: 15px; line-height: 1.7; max-width: 640px; }
+  .hero .meta { margin-top: 20px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .hero .badge {
+    background: rgba(255,255,255,.2);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* SECTIONS */
+  .section { margin-bottom: 56px; scroll-margin-top: 72px; }
+  .section h2 {
+    font-size: 22px;
+    color: var(--navy);
+    border-bottom: 3px solid var(--red);
+    padding-bottom: 10px;
+    margin-bottom: 22px;
+  }
+  .section h3 {
+    font-size: 16px;
+    color: var(--red);
+    margin: 22px 0 10px;
+    font-weight: 700;
+  }
+  .section p { line-height: 1.8; color: var(--gray); margin-bottom: 12px; }
+
+  /* CARDS ROW */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 18px;
+    transition: box-shadow .2s, border-color .2s;
+  }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); border-color: var(--red); }
+  .card .card-icon { font-size: 26px; margin-bottom: 10px; }
+  .card h4 { font-size: 14px; color: var(--navy); margin-bottom: 6px; }
+  .card p { font-size: 13px; color: #777; margin: 0; line-height: 1.6; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--red);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 12px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #333;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code-block .copy-btn {
+    position: absolute;
+    top: 8px; right: 10px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .code-block:hover .copy-btn { opacity: 1; }
+  .code-block .comment { color: #888; }
+
+  /* CALLOUTS */
+  .note, .warning, .tip {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.7;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .note { background: #FFF3F0; border-left: 4px solid var(--red); }
+  .warning { background: #FFF8E6; border-left: 4px solid #F5A623; }
+  .tip { background: #EEF6FF; border-left: 4px solid #2E86DE; }
+  .note .icon, .warning .icon, .tip .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* TABLES */
+  .tbl-wrap { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead tr { background: var(--red); color: #fff; }
+  thead th { padding: 11px 14px; text-align: left; font-weight: 600; white-space: nowrap; }
+  tbody tr:nth-child(even) { background: #FFF5F2; }
+  tbody tr:hover { background: #FFE8E0; }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid #f0e8e5; vertical-align: top; line-height: 1.5; }
+  tbody td code { background: var(--code-bg); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+
+  /* CHECKLIST */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 8px 0 8px 28px;
+    position: relative;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+    color: var(--gray);
+    line-height: 1.6;
+  }
+  .checklist li::before {
+    content: '☐';
+    position: absolute;
+    left: 0;
+    color: var(--red);
+    font-size: 16px;
+  }
+
+  /* STEPS */
+  .steps { counter-reset: step; }
+  .step-item {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    background: var(--red);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .step-body h4 { font-size: 15px; color: var(--navy); margin-bottom: 6px; }
+  .step-body p { font-size: 13.5px; color: var(--gray); line-height: 1.7; }
+
+  /* AGENT PILLS */
+  .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .agent-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+  .agent-card .name { font-weight: bold; color: var(--navy); margin-bottom: 4px; }
+  .agent-card code { background: var(--code-bg); padding: 2px 7px; border-radius: 3px; font-size: 12px; display: inline-block; margin: 4px 0; }
+  .agent-card .scope { font-size: 11px; color: #888; margin-top: 4px; }
+  .agent-card .note-text { font-size: 11.5px; color: #666; margin-top: 6px; line-height: 1.5; }
+
+  /* FLOW DIAGRAM */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .flow-step {
+    flex: 1;
+    min-width: 140px;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 14px;
+    text-align: center;
+    position: relative;
+    font-size: 13px;
+  }
+  .flow-step .num {
+    width: 24px; height: 24px;
+    background: var(--red);
+    color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .flow-step strong { display: block; color: var(--navy); margin-bottom: 4px; font-size: 13px; }
+  .flow-step p { color: #777; font-size: 12px; margin: 0; }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    color: var(--red);
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  /* SEARCH HIGHLIGHT */
+  .highlight { background: #FFE500; border-radius: 2px; }
+
+  /* BACK TO TOP */
+  #back-top {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 42px; height: 42px;
+    font-size: 18px;
+    cursor: pointer;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    z-index: 200;
+    transition: opacity .2s;
+  }
+  #back-top:hover { background: #d93a10; }
+
+  /* FOOTER */
+  #footer {
+    background: var(--dark);
+    color: #667;
+    text-align: center;
+    padding: 18px;
+    font-size: 12px;
+    margin-left: var(--sidebar-w);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main, #footer { margin-left: 0; }
+    #hamburger { display: block; }
+    #content { padding: 24px 20px 60px; }
+    .cards { grid-template-columns: 1fr; }
+    .agent-grid { grid-template-columns: 1fr 1fr; }
+    .flow { gap: 8px; }
+    .flow-arrow { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div id="sidebar-logo">
+    UiPath Coding Agents
+    <span>Implementation Guide v1.0</span>
+  </div>
+  <nav>
+    <div class="nav-section">Introduction</div>
+    <a href="#overview">Overview</a>
+    <a href="#prerequisites">Prerequisites</a>
+
+    <div class="nav-section">Setup</div>
+    <a href="#installation">Installation Steps</a>
+    <a href="#agents">Supported Agents</a>
+    <a href="#skills">Skills Explained</a>
+
+    <div class="nav-section">Usage</div>
+    <a href="#operate">Operate the Platform</a>
+    <a href="#troubleshoot">Troubleshoot with AI</a>
+    <a href="#best-practices">Best Practices</a>
+
+    <div class="nav-section">Reference</div>
+    <a href="#commands">Command Reference</a>
+    <a href="#issues">Common Issues</a>
+    <a href="#security">Security & Compliance</a>
+    <a href="#resources">Resources</a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button id="hamburger" onclick="toggleSidebar()">☰</button>
+      <div class="breadcrumb">UiPath CLI / <span>Coding Agents Guide</span></div>
+    </div>
+    <div id="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Search this guide…" oninput="doSearch(this.value)">
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>UiPath Coding Agents<br>Implementation Guide</h1>
+      <p>Enable AI coding agents — Claude Code, Cursor, GitHub Copilot, Gemini CLI, Codex, OpenCode — to build, operate, and troubleshoot UiPath automations through natural language using the <code style="background:rgba(255,255,255,.2);padding:2px 8px;border-radius:4px;">uip</code> CLI.</p>
+      <div class="meta">
+        <span class="badge">🗓 June 2026</span>
+        <span class="badge">📦 UiPath CLI — Standalone Latest</span>
+        <span class="badge">🎯 Product Support | Architects | Developers</span>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="section" id="overview">
+      <h2>1. What Are UiPath Coding Agents?</h2>
+      <p>UiPath Coding Agents connects AI coding agents to the UiPath platform through the <strong>uip CLI</strong>. The agent runs <code>uip</code> commands on your machine, using the session established by <code>uip login</code>. It inherits your permissions exactly.</p>
+      <p>The key concept is <strong>Skills</strong> — instruction bundles that teach the agent when to pack a Solution, how to chain <code>publish → deploy run</code>, when to wait for a job, and how to triage a faulted RPA process.</p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🔨</div>
+          <h4>Build &amp; Deploy</h4>
+          <p>Scaffold, validate, pack, publish, and deploy UiPath solutions and agents from natural-language asks.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚙️</div>
+          <h4>Operate</h4>
+          <p>Drive any Orchestrator task — folders, jobs, queues, assets, audit logs — through plain English.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔍</div>
+          <h4>Troubleshoot</h4>
+          <p>Conversational root-cause analysis for RPA failures, Orchestrator issues, and Maestro process faults.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="icon">ℹ️</span>
+        <div>Skills are <strong>not tools</strong>. Tools extend the CLI with new commands; skills extend the <em>agent</em> with UiPath-specific knowledge. You do not need to install tools before installing skills — the agent can auto-install them on first use.</div>
+      </div>
+    </div>
+
+    <!-- PREREQUISITES -->
+    <div class="section" id="prerequisites">
+      <h2>2. Prerequisites Checklist</h2>
+      <p>Verify all of the following before starting the installation.</p>
+      <ul class="checklist">
+        <li><strong>@uipath/cli installed</strong> on the machine — <code>npm install -g @uipath/cli</code></li>
+        <li><strong>Node.js LTS</strong> installed (required for npm-based install)</li>
+        <li><strong>Valid UiPath account</strong> (Cloud or on-premises) with appropriate permissions</li>
+        <li><strong>At least one supported coding agent</strong> installed (see Section 4)</li>
+        <li><strong>Outbound HTTPS</strong> to <code>cloud.uipath.com</code> and GitHub (for skill catalog)</li>
+        <li><strong>uip login session established</strong> — must run BEFORE skills install</li>
+      </ul>
+
+      <h3>Required Orchestrator Permissions</h3>
+      <p>The coding agent inherits your session permissions exactly. Ensure your account has:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Permission</th><th>Required For</th></tr></thead>
+          <tbody>
+            <tr><td>Read access to Orchestrator folders</td><td>Agent inspection of jobs, assets, queues</td></tr>
+            <tr><td>Write access to target folders</td><td>Agent deployment, resource management</td></tr>
+            <tr><td>Package upload rights</td><td>Publishing NuGet packages</td></tr>
+            <tr><td>Role assignment rights</td><td>Managing user-folder assignments</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INSTALLATION -->
+    <div class="section" id="installation">
+      <h2>3. Installation — Step by Step</h2>
+
+      <div class="steps">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Install UiPath CLI</h4>
+            <p>Install via npm. The package is <code>@uipath/cli</code>, binary is <code>uip</code>.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              npm install -g @uipath/cli<br>
+              uip --version
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Authenticate with UiPath</h4>
+            <p>Run <code>uip login</code> once per machine. All agent commands run under this session.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <span class="comment"># Interactive login (opens browser OAuth)</span><br>
+              uip login<br><br>
+              <span class="comment"># Service identity / External App (for CI/CD)</span><br>
+              uip login --client-id &lt;app-id&gt; --client-secret &lt;secret&gt; --tenant &lt;name&gt;<br><br>
+              <span class="comment"># Check session status</span><br>
+              uip login status
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Install Your Coding Agent</h4>
+            <p>Each agent has its own installer. Quick commands:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <span class="comment"># Claude Code</span><br>
+              curl -fsSL https://claude.ai/install.sh | bash<br><br>
+              <span class="comment"># Gemini CLI — see github.com/google-gemini/gemini-cli for install steps</span><br>
+              <span class="comment"># OpenCode — see opencode.ai for install steps</span><br><br>
+              <span class="comment"># Cursor / GitHub Copilot / Codex — download from their respective websites</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Install UiPath Skills</h4>
+            <p>Install skills into your coding agent. You pick the agent; all UiPath skills install at once.</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+              <span class="comment"># Claude Code (global only)</span><br>
+              uip skills install --agent claude<br><br>
+              <span class="comment"># Cursor — global</span><br>
+              uip skills install --agent cursor<br><br>
+              <span class="comment"># Cursor — project-local (tracked with repo)</span><br>
+              uip skills install --agent cursor --local<br><br>
+              <span class="comment"># Other agents</span><br>
+              uip skills install --agent copilot<br>
+              uip skills install --agent gemini<br>
+              uip skills install --agent codex<br>
+              uip skills install --agent opencode<br><br>
+              <span class="comment"># Interactive — choose agent(s) from a checkbox</span><br>
+              uip skills install
+            </div>
+            <div class="note">
+              <span class="icon">ℹ️</span>
+              <div>Claude Code supports <strong>global scope only</strong>. Using <code>--local</code> with <code>--agent claude</code> produces a ValidationError.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h4>Verify the Integration</h4>
+            <p>Open your coding agent and ask a UiPath-specific task. The agent should propose correct <code>uip</code> command chains.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Agent</th><th>Verification Ask</th><th>Expected Response</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Claude Code</strong></td><td>"Pack this Solution and deploy it to the Shared folder"</td><td>Proposes: uip solution pack → uip solution publish → uip solution deploy run</td></tr>
+                  <tr><td><strong>Cursor</strong></td><td>"Create a new UiPath Agent project and pack it"</td><td>Proposes: uip agent init → validate → pack</td></tr>
+                  <tr><td><strong>GitHub Copilot</strong></td><td>Ask any UiPath task in Chat</td><td>Cites the installed skill rules</td></tr>
+                  <tr><td><strong>Gemini CLI</strong></td><td>Ask for a UiPath deployment task</td><td>Proposes correct uip commands</td></tr>
+                  <tr><td><strong>Codex / OpenCode</strong></td><td>Ask for a UiPath task</td><td>Follows the skill recipe</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="margin-top:10px;font-size:13px;color:#888;">If Claude Code doesn't respond correctly, restart it to reload plugins, then retry.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AGENTS -->
+    <div class="section" id="agents">
+      <h2>4. Supported Coding Agents</h2>
+      <p>All agents share the same three prerequisites: uip CLI installed, a logged-in session, and the coding agent installed.</p>
+
+      <div class="agent-grid">
+        <div class="agent-card">
+          <div class="name">🤖 Claude Code</div>
+          <code>--agent claude</code>
+          <div class="scope">📍 Global only</div>
+          <div class="note-text">Skills install via the Claude Code plugin system. User-scoped — <code>--local</code> not supported.</div>
+        </div>
+        <div class="agent-card">
+          <div class="name">⚡ Cursor</div>
+          <code>--agent cursor</code>
+          <div class="scope">📍 Global or Local</div>
+          <div class="note-text">Skills at <code>.cursor/skills/&lt;skill&gt;/</code>. Loads per-workspace.</div>
+        </div>
+        <div class="agent-card">
+          <div class="name">🐙 GitHub Copilot</div>
+          <code>--agent copilot</code>
+          <div class="scope">📍 Global or Local</div>
+          <div class="note-text">Skills at <code>.github/skills/&lt;skill&gt;/</code>. Works in VS Code, JetBrains, Visual Studio.</div>
+        </div>
+        <div class="agent-card">
+          <div class="name">💎 Gemini CLI</div>
+          <code>--agent gemini</code>
+          <div class="scope">📍 Global or Local</div>
+          <div class="note-text">Skills at <code>.gemini/skills/&lt;skill&gt;/</code>.</div>
+        </div>
+        <div class="agent-card">
+          <div class="name">🧠 Codex</div>
+          <code>--agent codex</code>
+          <div class="scope">📍 Global or Local</div>
+          <div class="note-text">Skills at <code>.agents/skills/&lt;skill&gt;/</code> — open Agent Skills standard directory.</div>
+        </div>
+        <div class="agent-card">
+          <div class="name">🌐 OpenCode</div>
+          <code>--agent opencode</code>
+          <div class="scope">📍 Global or Local</div>
+          <div class="note-text">Global: <code>~/.config/opencode/skills/</code>. Local: <code>.opencode/skills/</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKILLS -->
+    <div class="section" id="skills">
+      <h2>5. Understanding Skills</h2>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Tools (uip tools)</th><th>Skills (uip skills)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>What they do</strong></td><td>Extend the CLI with new commands</td><td>Extend agents with UiPath knowledge</td></tr>
+            <tr><td><strong>Who uses them</strong></td><td>The uip CLI itself</td><td>AI coding agents (Claude, Cursor, etc.)</td></tr>
+            <tr><td><strong>Example</strong></td><td><code>uip rpa pack</code>, <code>uip or jobs list</code></td><td>Guides agent to the right command sequence</td></tr>
+            <tr><td><strong>Install command</strong></td><td><code>uip tools install ...</code></td><td><code>uip skills install --agent &lt;name&gt;</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Skills Lifecycle Commands</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <span class="comment"># Install</span><br>
+        uip skills install --agent &lt;name&gt;<br>
+        uip skills install --agent &lt;name&gt; --local<br><br>
+        <span class="comment"># Update (also removes skills dropped from catalog)</span><br>
+        uip skills update --agent &lt;name&gt;<br><br>
+        <span class="comment"># Uninstall</span><br>
+        uip skills uninstall --agent &lt;name&gt;<br><br>
+        <span class="comment"># After every CLI upgrade — run BOTH:</span><br>
+        uip skills update --agent &lt;name&gt;<br>
+        uip tools update
+      </div>
+
+      <h3>Global vs. Local Scope</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Scope</th><th>Flag</th><th>Location</th><th>Use Case</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Global</strong></td><td>(default)</td><td>User's agent profile</td><td>Available in every project on the machine</td></tr>
+            <tr><td><strong>Local</strong></td><td><code>--local</code></td><td>Current directory</td><td>Pin skills to a specific version; ship to all contributors</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:13px;color:#888;">Local installs automatically add the skill store directory to <code>.gitignore</code> so cached bundles are not committed.</p>
+    </div>
+
+    <!-- OPERATE -->
+    <div class="section" id="operate">
+      <h2>6. Operating the UiPath Platform</h2>
+      <p>A coding agent with skills installed can drive any operational task through plain English. It runs <code>uip</code> against your logged-in session, scoped to the folder context you provide.</p>
+
+      <div class="warning">
+        <span class="icon">⚠️</span>
+        <div><strong>Read vs. Write:</strong> The agent runs read operations (list, get, logs) autonomously. For write operations (create, update, delete), it <strong>must confirm with you first</strong>. Best practice: "Clean up unused packages, but show me the list first."</div>
+      </div>
+
+      <h3>Full Capabilities</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Area</th><th>What the Agent Can Do</th><th>Example Ask</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Folders &amp; Access</strong></td><td>List, create, nest, move, delete folders; assign users and roles</td><td>"Add &lt;alice@x.com&gt; to Finance as Automation User"</td></tr>
+            <tr><td><strong>Users, Roles &amp; Permissions</strong></td><td>Inspect role grants, create/edit/delete roles, list permissions, see who has access to what</td><td>"Which folders does &lt;bob@x.com&gt; have access to, and with what roles?"</td></tr>
+            <tr><td><strong>Licenses</strong></td><td>Inspect allocations across users and robots</td><td>"Add 2 more Unattended runtime licenses to prod-worker-01"</td></tr>
+            <tr><td><strong>Machines &amp; Runtimes</strong></td><td>List machines, inspect runtimes available in a folder</td><td>"What runtimes are available in Production?"</td></tr>
+            <tr><td><strong>Sessions</strong></td><td>List active robot sessions, see which machine each is on, disconnect stuck sessions</td><td>"Show all running unattended sessions in Production and how long they've been active"</td></tr>
+            <tr><td><strong>Processes &amp; Packages</strong></td><td>Upload packages, list versions, create or update process releases</td><td>"Publish version 2.3.0 of InvoiceBot to Finance"</td></tr>
+            <tr><td><strong>Solutions</strong></td><td>Publish, upload, deploy, activate; list deployed versions across tenants and folders</td><td>"Deploy v1.4 of the invoice processing solution to Accounting in the staging tenant"</td></tr>
+            <tr><td><strong>Jobs</strong></td><td>Start, stop, monitor, fetch execution logs and attachments</td><td>"List every faulted job from yesterday with error messages"</td></tr>
+            <tr><td><strong>Assets</strong></td><td>List, get, create, update, delete assets across folders</td><td>"Copy all assets from folder A to folder B"</td></tr>
+            <tr><td><strong>Credential Stores</strong></td><td>List, create, update, delete vault integrations; rotate referenced credentials</td><td>"Which assets in Production still reference the old CyberArk store?"</td></tr>
+            <tr><td><strong>Queues &amp; Queue Items</strong></td><td>Inspect queue depth, push items, bulk-update statuses</td><td>"Which queues have more than 100 NewItems right now?"</td></tr>
+            <tr><td><strong>Storage Buckets &amp; Files</strong></td><td>Create buckets, upload, download, list, delete files</td><td>"Download files from reports/ modified in last 7 days"</td></tr>
+            <tr><td><strong>Libraries</strong></td><td>Publish, list versions, manage releases</td><td>"Show all versions of Email.Utilities library"</td></tr>
+            <tr><td><strong>Triggers</strong></td><td>Create time, queue, and event triggers; manage calendars</td><td>"Show last 10 runs of triggers for HR onboarding solution"</td></tr>
+            <tr><td><strong>Webhooks</strong></td><td>Create, list, test webhooks</td><td>"List all active webhooks and events they listen to"</td></tr>
+            <tr><td><strong>Integration Service</strong></td><td>List, test, refresh OAuth tokens; check connection health</td><td>"Test every Salesforce connection in Production"</td></tr>
+            <tr><td><strong>Audit Logs</strong></td><td>Filter by user, component, action, date range</td><td>"Who deleted the Finance folder last month?"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Common Multi-Step Patterns</h3>
+      <div class="cards" style="grid-template-columns:repeat(2,1fr);">
+        <div class="card">
+          <div class="card-icon">🔥</div>
+          <h4>Triage Faulted Jobs</h4>
+          <p>"Triage every faulted job in Production from last 24 hours. Group by error message. Show top 5 root causes." — Agent lists jobs, fetches logs, groups by error signature.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🚀</div>
+          <h4>Promote Between Tenants</h4>
+          <p>"Promote invoice processing from dev to staging. Deploy under Accounting folder." — Agent pulls from dev, switches session, deploys into staging (confirms each switch).</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">👤</div>
+          <h4>Assign User + Machine</h4>
+          <p>"Assign &lt;charlie@x.com&gt; as Automation User to the Accounting folder, and also assign the VM Machine." — Agent assigns the user with the role, then assigns the VM Machine so the user can run unattended jobs against it.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔐</div>
+          <h4>Audit External Role Grants</h4>
+          <p>"Audit all roles for external users. Report which folders they can edit." — Agent lists users, filters domain, expands role grants per folder.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TROUBLESHOOT -->
+    <div class="section" id="troubleshoot">
+      <h2>7. Troubleshooting with Coding Agents</h2>
+      <p>Describe a failure in plain English — from any terminal including the UiPath Studio integrated terminal — and the Troubleshoot skill triages it, ranks causes, tests hypotheses against live platform data, and returns a root cause with a concrete fix.</p>
+
+      <h3>How to Start a Diagnostic Session</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <span class="comment"># Explicit skill invocation</span><br>
+        /uipath-troubleshoot<br><br>
+        <span class="comment"># Or just describe the problem naturally:</span><br>
+        My job abc-123 failed this morning, what happened?<br>
+        Why is InvoiceBot not picking up queue items?<br>
+        The approval process faulted on step 3, diagnose it.
+      </div>
+
+      <h3>Four-Stage Diagnostic Flow</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="num">1</div>
+          <strong>Triage</strong>
+          <p>Classify the failure scope. Asks a clarifying question if ambiguous.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="num">2</div>
+          <strong>Hypotheses</strong>
+          <p>Ranked list of possible causes from the domain playbook.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="num">3</div>
+          <strong>Test</strong>
+          <p>Fetches logs, traces, queue items, audit events via uip to confirm/eliminate.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="num">4</div>
+          <strong>Resolution</strong>
+          <p>Root cause + event chain + concrete fix. Asks approval before changing anything.</p>
+        </div>
+      </div>
+
+      <h3>Diagnosable Domains</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Domain</th><th>What You Can Diagnose</th><th>Example Ask</th></tr></thead>
+          <tbody>
+            <tr><td><strong>RPA</strong></td><td>SelectorNotFoundException, TimeoutException, queue item failures, selector mismatches, Healing Agent data analysis</td><td>"Why did InvoiceBot fail this morning?"</td></tr>
+            <tr><td><strong>Orchestrator</strong></td><td>Stuck/faulted jobs, permission and role issues, deployment and publishing errors, queue configuration problems</td><td>"Why is my robot not picking up items from Finance?"</td></tr>
+            <tr><td><strong>Maestro</strong></td><td>Faulted process instances, step-level failures, incidents, multi-domain failure chains (agents + RPA)</td><td>"Why did the approval process fault on step 3?"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Tips for Effective Sessions</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tip</th><th>Why It Helps</th></tr></thead>
+          <tbody>
+            <tr><td>Be specific — include job IDs, process names, exact errors</td><td>Skips the clarifying round; agent can go straight to evidence</td></tr>
+            <tr><td>Say "that's not it" or "dig deeper" if first answer misses</td><td>The skill adjusts and follows a different hypothesis chain</td></tr>
+            <tr><td>Redirect if needed: "The issue is not permissions; job ran fine yesterday"</td><td>Prevents the skill from following the wrong thread</td></tr>
+            <tr><td>Share XAML, project.json, config files when asked</td><td>Sharply improves diagnosis quality for code-level failures</td></tr>
+            <tr><td>Match expectations to your permissions</td><td>The skill uses your uip session — if you can't view a log, neither can it</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BEST PRACTICES -->
+    <div class="section" id="best-practices">
+      <h2>8. Best Practices</h2>
+
+      <h3>Outcome-First Prompting</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>✅ Do This (Outcome-First)</th><th>❌ Not This (Command-First)</th></tr></thead>
+          <tbody>
+            <tr><td>"Deploy this Solution to production"</td><td>"Run uip solution pack then uip solution publish then..."</td></tr>
+            <tr><td>"Triage faulted jobs from last 24h in Production"</td><td>"Run uip or jobs list --state Faulted --folder Production"</td></tr>
+            <tr><td>"Create a new UiPath Agent project and validate it"</td><td>"Run uip agent init, then uip agent validate"</td></tr>
+            <tr><td>"What runtimes are available in Finance folder?"</td><td>"Run uip or machines list --folder Finance"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>When the Agent Gets Stuck</h3>
+      <p>If the agent cannot determine the correct command, use this recovery pattern:</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <span class="comment"># Run the help command and paste output into the agent</span><br>
+        uip &lt;command&gt; --help
+      </div>
+      <p>The built-in help is authoritative. Agents recover immediately once given the help output.</p>
+
+      <h3>Session Identity</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <span class="comment"># Personal work — agent acts as you</span><br>
+        uip login<br><br>
+        <span class="comment"># CI/CD or service identity (cleaner audit trail)</span><br>
+        uip login --client-id &lt;id&gt; --client-secret &lt;secret&gt; --tenant &lt;name&gt;
+      </div>
+
+      <h3>MCP — Alternative Path</h3>
+      <p>For MCP-aware clients not on the supported-agents list, the CLI ships an MCP server exposing a <code>run_command</code> tool:</p>
+      <div class="code-block">uip mcp</div>
+      <p>This is not the primary path — skills are. Use MCP only for specialized integrations that already speak MCP.</p>
+    </div>
+
+    <!-- COMMANDS -->
+    <div class="section" id="commands">
+      <h2>9. Command Reference</h2>
+
+      <h3>Authentication</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        uip login                                        <span class="comment"># Interactive OAuth (browser)</span><br>
+        uip login --client-id &lt;id&gt; --client-secret &lt;s&gt; --tenant &lt;t&gt;  <span class="comment"># External App</span><br>
+        uip login status                                 <span class="comment"># Check session</span><br>
+        uip logout                                       <span class="comment"># Revoke session</span>
+      </div>
+
+      <h3>Skills</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        uip skills install --agent claude<br>
+        uip skills install --agent cursor<br>
+        uip skills install --agent cursor --local<br>
+        uip skills install --agent copilot<br>
+        uip skills install --agent gemini<br>
+        uip skills install --agent codex<br>
+        uip skills install --agent opencode<br>
+        uip skills install                               <span class="comment"># Interactive</span><br>
+        uip skills update --agent &lt;name&gt;<br>
+        uip skills uninstall --agent &lt;name&gt;
+      </div>
+
+      <h3>Solution Lifecycle</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        uip solution new<br>
+        uip solution pack<br>
+        uip solution publish<br>
+        uip solution upload<br>
+        uip solution deploy run<br>
+        uip solution bundle
+      </div>
+
+      <h3>Agent Lifecycle</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        uip agent init<br>
+        uip agent config<br>
+        uip agent validate<br>
+        uip agent pack<br>
+        uip agent publish<br>
+        uip agent deploy<br>
+        uip agent run<br>
+        uip agent eval
+      </div>
+
+      <h3>Orchestrator Operations (uip or)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        uip or jobs list<br>
+        uip or jobs list --state Faulted --folder &lt;name&gt;<br>
+        uip or jobs start --process &lt;name&gt;<br>
+        uip or jobs stop --id &lt;job-id&gt;<br>
+        uip or folders list<br>
+        uip or folders create --name &lt;name&gt;<br>
+        uip or users list<br>
+        uip or roles list<br>
+        uip or licenses list<br>
+        uip or machines list<br>
+        uip or sessions list<br>
+        uip or packages list<br>
+        uip or packages upload --file &lt;pkg&gt;<br>
+        uip or processes list<br>
+        uip or audit-logs list<br>
+        uip or credential-stores list
+      </div>
+
+      <h3>Resource Management (uip resource)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        uip resource assets list<br>
+        uip resource assets create<br>
+        uip resource assets update<br>
+        uip resource assets delete --name &lt;name&gt;<br>
+        uip resource queues list<br>
+        uip resource queue-items list<br>
+        uip resource buckets list<br>
+        uip resource bucket-files list<br>
+        uip resource libraries list<br>
+        uip resource triggers list<br>
+        uip resource webhooks list
+      </div>
+
+      <h3>Global Options</h3>
+      <div class="code-block">
+        uip &lt;command&gt; --help          <span class="comment"># Always authoritative</span><br>
+        uip &lt;command&gt; --output json<br>
+        uip &lt;command&gt; --output yaml<br>
+        uip &lt;command&gt; --output table  <span class="comment"># default</span><br>
+        uip &lt;command&gt; --tenant &lt;name&gt;<br>
+        uip &lt;command&gt; --folder &lt;name&gt;
+      </div>
+    </div>
+
+    <!-- COMMON ISSUES -->
+    <div class="section" id="issues">
+      <h2>10. Common Issues &amp; Fixes</h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td>Agent doesn't recognize UiPath tasks</td><td>Skills not loaded</td><td>For Claude Code: restart the app. For others: verify skill files exist at expected path. Re-run <code>uip skills install --agent &lt;name&gt;</code></td></tr>
+            <tr><td><code>--local</code> flag causes ValidationError with Claude Code</td><td>Claude Code is global-only</td><td>Remove the <code>--local</code> flag.</td></tr>
+            <tr><td><code>uip: command not found</code></td><td>npm global bin not in PATH</td><td>Run <code>npm bin -g</code> to find the path. Add it to <code>~/.bashrc</code> or system PATH.</td></tr>
+            <tr><td>401 Unauthorized on uip commands</td><td>Session expired</td><td>Run <code>uip login</code> to re-authenticate. Verify tenant name and region.</td></tr>
+            <tr><td>Agent proposes wrong command chain</td><td>Skills outdated</td><td>Run <code>uip skills update --agent &lt;name&gt;</code> and <code>uip tools update</code></td></tr>
+            <tr><td>Agent stuck on wrong flag</td><td>Skills don't cover specific flag</td><td>Run <code>uip &lt;command&gt; --help</code> and paste the output into the conversation.</td></tr>
+            <tr><td>Skill files missing after install</td><td>Install path mismatch</td><td>Re-run install — it prints the destination path. Verify that path exists on disk.</td></tr>
+            <tr><td>Permission denied during deployment</td><td>Insufficient Orchestrator permissions</td><td>Check: <code>uip or roles list --folder &lt;name&gt;</code>. Ensure Write + Deploy access on target folder.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SECURITY -->
+    <div class="section" id="security">
+      <h2>11. Security &amp; Compliance</h2>
+
+      <div class="warning">
+        <span class="icon">⚠️</span>
+        <div><strong>Disclaimer:</strong> The Coding Agent does not validate the compliance of generated code, operational commands it executes, or troubleshooting actions it recommends. You are responsible for reviewing all outputs before applying them to production.</div>
+      </div>
+
+      <h3>Responsible Use Checklist</h3>
+      <ul class="checklist">
+        <li>Authenticate with a <strong>dedicated minimal-permission token</strong> — not your full personal access</li>
+        <li>Use <strong>External App sessions</strong> for CI/CD and scheduled agent tasks</li>
+        <li>Configure <strong>agent guardrails</strong> to limit scope and prevent unexpected behavior</li>
+        <li>Run in <strong>attended mode</strong> for any production operational tasks</li>
+        <li>Verify personal data processing complies with your <strong>organization's data policies</strong></li>
+        <li>Maintain <strong>human oversight</strong> at all approval checkpoints</li>
+        <li>Do <strong>NOT</strong> use production credentials for testing</li>
+        <li>Review audit logs after each agent-driven deployment: <code>uip or audit-logs list</code></li>
+      </ul>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="section" id="resources">
+      <h2>12. Resources &amp; Documentation</h2>
+
+      <h3>Official Documentation</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Resource</th><th>URL</th></tr></thead>
+          <tbody>
+            <tr><td>Using UiPath CLI with Coding Agents</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/coding-agents" target="_blank">docs.uipath.com/…/coding-agents</a></td></tr>
+            <tr><td>Operate with Coding Agents</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/coding-agents-operate" target="_blank">docs.uipath.com/…/coding-agents-operate</a></td></tr>
+            <tr><td>Troubleshoot with Coding Agents</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/troubleshoot-with-uipath-for-coding-agents" target="_blank">docs.uipath.com/…/troubleshoot-with-uipath-for-coding-agents</a></td></tr>
+            <tr><td>Skills Concept</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/concepts-skills" target="_blank">docs.uipath.com/…/concepts-skills</a></td></tr>
+            <tr><td>Installing UiPath CLI</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/installing-uipath-cli" target="_blank">docs.uipath.com/…/installing-uipath-cli</a></td></tr>
+            <tr><td>Authentication</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/authentication" target="_blank">docs.uipath.com/…/authentication</a></td></tr>
+            <tr><td>Managing Tools and Skills</td><td><a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/managing-tools-and-skills" target="_blank">docs.uipath.com/…/managing-tools-and-skills</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Support</h3>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🆘</div>
+          <h4>Support Portal</h4>
+          <p><a href="https://support.uipath.com" target="_blank">support.uipath.com</a></p>
+        </div>
+        <div class="card">
+          <div class="card-icon">💬</div>
+          <h4>Community Forum</h4>
+          <p><a href="https://forum.uipath.com" target="_blank">forum.uipath.com</a></p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🎓</div>
+          <h4>Academy</h4>
+          <p><a href="https://academy.uipath.com" target="_blank">academy.uipath.com</a></p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<footer id="footer">
+  UiPath Coding Agents Implementation Guide — v1.0 · June 2026 · UiPath Product Support &nbsp;|&nbsp;
+  Source: <a href="https://docs.uipath.com/uipath-cli/standalone/latest/user-guide/coding-agents" target="_blank" style="color:#556;">docs.uipath.com</a>
+</footer>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
+
+<script>
+  // ── Active nav link on scroll ───────────────────────────────────────────────
+  const sections = document.querySelectorAll('.section');
+  const navLinks = document.querySelectorAll('#sidebar nav a');
+
+  function setActive() {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  }
+  window.addEventListener('scroll', setActive);
+  setActive();
+
+  // ── Back to top button ──────────────────────────────────────────────────────
+  const backTop = document.getElementById('back-top');
+  window.addEventListener('scroll', () => {
+    backTop.style.display = window.scrollY > 400 ? 'flex' : 'none';
+  });
+  backTop.style.alignItems = 'center';
+  backTop.style.justifyContent = 'center';
+
+  // ── Smooth scroll for nav links ─────────────────────────────────────────────
+  navLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+      }
+    });
+  });
+
+  // ── Mobile sidebar toggle ───────────────────────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+
+  // ── Copy code button ─────────────────────────────────────────────────────────
+  function copyCode(btn) {
+    const block = btn.parentElement;
+    const text = block.innerText.replace('Copy', '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1800);
+    });
+  }
+
+  // ── Search ──────────────────────────────────────────────────────────────────
+  let searchTimeout;
+  function doSearch(query) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      // Remove existing highlights
+      document.querySelectorAll('.highlight').forEach(el => {
+        el.outerHTML = el.innerHTML;
+      });
+      if (!query.trim() || query.length < 2) return;
+
+      const content = document.getElementById('content');
+      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+
+      const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+      nodes.forEach(node => {
+        if (!node.textContent.match(re)) return;
+        const parent = node.parentNode;
+        if (['SCRIPT','STYLE','BUTTON'].includes(parent.tagName)) return;
+        const span = document.createElement('span');
+        span.innerHTML = node.textContent.replace(re, '<mark class="highlight">$1</mark>');
+        parent.replaceChild(span, node);
+      });
+
+      // Scroll to first match
+      const first = document.querySelector('.highlight');
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+</script>
+</body>
+</html>
